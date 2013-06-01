@@ -19,7 +19,7 @@ name: App-aki
 provides:
   App::aki:
     file: lib/App/aki.pm
-    version: 0.01
+    version: 0.02
 requires:
   Data::MessagePack: 0
   Data::Printer: 0
@@ -35,4 +35,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: http://github.com/bayashi/App-aki
-version: 0.01
+version: 0.02
