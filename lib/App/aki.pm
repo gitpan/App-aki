@@ -5,9 +5,11 @@ use Getopt::Long qw/GetOptionsFromArray/;
 use LWP::UserAgent;
 use HTTP::Request;
 use Data::Printer qw//;
+use Encode qw//;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
+# Every decode routine MUST return the UNICODE string.
 our %DECODERS = (
     json => +{
         class  => 'JSON',
@@ -31,7 +33,7 @@ our %DECODERS = (
         },
         decode => sub {
             my $content = shift;
-            my $xml = XML::TreePP->new;
+            my $xml = XML::TreePP->new(utf8_flag => 1);
             $xml->parse($content);
         },
     },
@@ -44,6 +46,7 @@ our %DECODERS = (
         },
         decode => sub {
             my $content = shift;
+            $YAML::Syck::ImplicitUnicode = 1;
             YAML::Syck::Load($content);
         },
     },
@@ -56,7 +59,7 @@ our %DECODERS = (
         },
         decode => sub {
             my $content = shift;
-            my $mp = Data::MessagePack->new;
+            my $mp = Data::MessagePack->new->utf8;
             $mp->decode($content);
         },
     },
@@ -79,7 +82,7 @@ sub run {
     my $decoded = _decode($config, $res);
     my $dump    = _dumper($config, $decoded);
 
-    print "---\n$dump\n---\n";
+    print Encode::encode($config->{out_enc}, "---\n$dump\n---\n");
 }
 
 sub _dumper {
@@ -100,18 +103,7 @@ sub _dumper {
 sub _decode {
     my ($config, $res) = @_;
 
-    my $decoded;
-    if ( my $decoder = $DECODERS{ lc $config->{decoder} } ) {
-        $decoded = _decoding($config, $decoder, $res);
-    }
-    else {
-        for my $name (keys %DECODERS) {
-            my $decoder = $DECODERS{$name};
-            next unless $decoder->{detect}->($res);
-            $decoded = _decoding($config, $decoder, $res);
-            last;
-        }
-    }
+    my $decoded = _decoder($config, $res);
 
     if ($decoded && $config->{pointer}) {
         require JSON::Pointer;
@@ -125,12 +117,34 @@ sub _decode {
     return $decoded;
 }
 
+sub _decoder {
+    my ($config, $res) = @_;
+
+    my $decoded;
+    if ( my $decoder = $DECODERS{ lc $config->{decoder} } ) {
+        $decoded = _decoding($config, $decoder, $res);
+    }
+    else {
+        for my $name (keys %DECODERS) {
+            my $decoder = $DECODERS{$name};
+            next unless $decoder->{detect}->($res);
+            $decoded = _decoding($config, $decoder, $res);
+            last;
+        }
+    }
+    return $decoded;
+}
+
 sub _decoding {
     my ($config, $decoder, $res) = @_;
 
     _load_class( _class2path($decoder->{class}) );
     _show_verbose('decode class', $decoder->{class}) if $config->{verbose};
-    return $decoder->{decode}->($res->content);
+    my $content = $res->content;
+    if ($config->{in_enc} !~ m!^utf\-?8$!i) {
+        Encode::from_to($content, $config->{in_enc} => 'utf8');
+    }
+    return $decoder->{decode}->($content);
 }
 
 sub _error {
@@ -190,6 +204,7 @@ sub _prepare_request {
         agent   => $config->{agent} || __PACKAGE__. "/$VERSION",
         timeout => $config->{timeout},
     );
+    $ua->env_proxy;
     my $req = HTTP::Request->new(
         uc($config->{method}) => $config->{url},
     );
@@ -214,6 +229,8 @@ sub _merge_opt {
         'm|method=s'  => \$config->{method},
         'timeout=i'   => \$config->{timeout},
         'p|pointer=s' => \$config->{pointer},
+        'ie|in-enc=s' => \$config->{in_enc},
+        'oe|out-enc=s' => \$config->{out_enc},
         'agent=s'     => \$config->{agent},
         'color'       => \$config->{color},
         'raw'         => \$config->{raw},
@@ -231,6 +248,9 @@ sub _merge_opt {
     $config->{method}  ||= 'GET';
     $config->{timeout} ||= 10;
     $config->{color}   ||= 0;
+
+    $config->{out_enc} ||= 'utf8';
+    $config->{in_enc}  ||= 'utf8';
 
     $config->{url} = shift @argv;
 }
