@@ -3,12 +3,16 @@ Changes
 lib/App/aki.pm
 Makefile.PL
 MANIFEST			This list of files
+META.json
 README.pod
 script/aki
+share/.akirc
 t/00_compile.t
 t/01_pointer.t
 t/02_verbose.t
 t/03_specify_decoder.t
+t/04_enc.t
+t/05_rc.t
 t/akiUtil.pm
 t/decode/01_json.t
 t/decode/02_xml.t
@@ -20,4 +24,3 @@ xt/03_pod.t
 xt/04_notabs.t
 xt/05_code_metrics.t
 META.yml
-META.json
