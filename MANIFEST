@@ -13,6 +13,9 @@ t/02_verbose.t
 t/03_specify_decoder.t
 t/04_enc.t
 t/05_rc.t
+t/06_print_escape.t
+t/07_stderr.t
+t/08_indent.t
 t/akiUtil.pm
 t/decode/01_json.t
 t/decode/02_xml.t

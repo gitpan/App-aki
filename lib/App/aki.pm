@@ -8,7 +8,7 @@ use Data::Printer qw//;
 use Encode qw//;
 use File::Spec;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 # Every decode routine MUST return the UNICODE string.
 our %DECODERS = (
@@ -85,11 +85,19 @@ sub run {
     my $decoded = _decode($config, $res);
     my $dump    = _dumper($config, $decoded);
 
-    print Encode::encode($config->{out_enc}, "---\n$dump\n---\n");
+    my $output = Encode::encode($config->{out_enc}, "---\n$dump\n---\n");
+    if ($config->{stderr}) {
+        print STDERR $output;
+    }
+    else {
+        print STDOUT $output;
+    }
 }
 
 sub _read_rc {
     my $rc_file = shift;
+
+    local %ENV = %ENV;
 
     my %config;
     for my $dir ('/etc/', $ENV{AKIRC_DIR}, $ENV{HOME}, '.') {
@@ -140,9 +148,11 @@ sub _dumper {
 
     my $dump = Data::Printer::p(
         $hash,
-        return_value => 'dump',
-        colored      => $config->{color},
-        index        => 0,
+        return_value  => 'dump',
+        colored       => $config->{color},
+        index         => 0,
+        print_escapes => $config->{print_escapes},
+        indent        => $config->{indent},
     );
     $dump =~ s!^[^\n]+\n!!;
     $dump =~ s![\r\n]}$!!;
@@ -275,18 +285,21 @@ sub _merge_opt {
     Getopt::Long::Configure('bundling');
     GetOptionsFromArray(
         \@argv,
-        'd|decoder=s' => \$config->{decoder},
-        'm|method=s'  => \$config->{method},
-        'timeout=i'   => \$config->{timeout},
-        'p|pointer=s' => \$config->{pointer},
-        'ie|in-enc=s' => \$config->{in_enc},
-        'oe|out-enc=s' => \$config->{out_enc},
-        'agent=s'     => \$config->{agent},
-        'color'       => \$config->{color},
-        'raw'         => \$config->{raw},
-        'verbose'     => \$config->{verbose},
-        'rc=s'        => \$config->{rc},
-        'h|help'      => sub {
+        'd|decoder=s'   => \$config->{decoder},
+        'm|method=s'    => \$config->{method},
+        'timeout=i'     => \$config->{timeout},
+        'p|pointer=s'   => \$config->{pointer},
+        'ie|in-enc=s'   => \$config->{in_enc},
+        'oe|out-enc=s'  => \$config->{out_enc},
+        'agent=s'       => \$config->{agent},
+        'color'         => \$config->{color},
+        'print_escapes' => \$config->{print_escapes},
+        'stderr'        => \$config->{stderr},
+        'indent=i'      => \$config->{indent},
+        'raw'           => \$config->{raw},
+        'verbose'       => \$config->{verbose},
+        'rc=s'          => \$config->{rc},
+        'h|help'        => sub {
             _show_usage(1);
         },
         'v|version'   => sub {
@@ -302,6 +315,8 @@ sub _merge_opt {
 
     $config->{out_enc} ||= 'utf8';
     $config->{in_enc}  ||= 'utf8';
+
+    $config->{indent}  ||= 4;
 
     $config->{url} = shift @argv;
 }
