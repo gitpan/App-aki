@@ -18,6 +18,8 @@ t/07_stderr.t
 t/08_indent.t
 t/09_header.t
 t/10_auth_basic.t
+t/11_cookie.t
+t/12_referer.t
 t/akiUtil.pm
 t/decode/01_json.t
 t/decode/02_xml.t
