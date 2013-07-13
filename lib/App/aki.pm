@@ -4,11 +4,13 @@ use warnings;
 use Getopt::Long qw/GetOptionsFromArray/;
 use LWP::UserAgent;
 use HTTP::Request;
+use HTTP::Cookies;
 use Data::Printer qw//;
 use Encode qw//;
 use File::Spec;
+use Config::CmdRC '.akirc';
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 # Every decode routine MUST return the UNICODE string.
 our %DECODERS = (
@@ -66,16 +68,20 @@ our %DECODERS = (
     },
 );
 
-our $DEFAULT_RCFILE_NAME = '.akirc';
-
 sub run {
     my $self = shift;
     my @argv = @_;
 
-    my $config = _read_rc( _rc_file(@argv) );
+    my $config = RC();
     _merge_opt($config, @argv);
 
     my $res = _request($config);
+
+    if ($config->{cookie_jar}) {
+        my $cookie_jar = HTTP::Cookies->new;
+        $cookie_jar->extract_cookies($res);
+        $cookie_jar->save($config->{cookie_jar});
+    }
 
     if ($config->{raw}) {
         print $res->content;
@@ -92,55 +98,6 @@ sub run {
     else {
         print STDOUT $output;
     }
-}
-
-sub _read_rc {
-    my $rc_file = shift;
-
-    local %ENV = %ENV;
-
-    my %config;
-    for my $dir ('/etc/', $ENV{AKIRC_DIR}, $ENV{HOME}, '.') {
-        next unless $dir;
-        my $file = File::Spec->catfile($dir, $rc_file);
-        next unless -e $file;
-        _parse_rc($file => \%config);
-    }
-    return \%config;
-}
-
-sub _parse_rc {
-    my ($file, $config) = @_;
-
-    open my $fh, '<', $file;
-    while (<$fh>) {
-        chomp;
-        next if /\A\s*\Z/sm;
-        if (/\A(\w+):\s*(.+)\Z/sm) {
-            my ($key, $value) = ($1, $2);
-            if ($key eq 'file') {
-                push @{$config->{$key}}, $value;
-            }
-            else {
-                $config->{$key} = $value;
-            }
-        }
-    }
-    close $fh;
-}
-
-sub _rc_file {
-    my @argv = @_;
-
-    my $rc = 0;
-    for my $opt (@argv) {
-        if ($opt =~ m!--rc=([^\s]+)!) {
-            return $1;
-        }
-        return $opt if $rc == 1;
-        $rc = 1 if $opt eq '--rc';
-    }
-    return $DEFAULT_RCFILE_NAME;
 }
 
 sub _dumper {
@@ -264,10 +221,25 @@ sub _prepare_request {
         agent   => $config->{agent} || __PACKAGE__. "/$VERSION",
         timeout => $config->{timeout},
     );
+    if ($config->{header} && ref $config->{header} eq 'ARRAY') {
+        for my $h (@{$config->{header}}) {
+            my ($field, $value) = split /:\s+?/, $h;
+            $ua->default_header($field => $value);
+        }
+    }
     $ua->env_proxy;
     my $req = HTTP::Request->new(
         uc($config->{method}) => $config->{url},
     );
+
+    if ($config->{user}) {
+        my ($user, $passwd) = split /:/, $config->{user};
+        $req->authorization_basic($user, $passwd);
+    }
+
+    if ($config->{cookie}) {
+        $ua->cookie_jar({ file => $config->{cookie} });
+    }
 
     return($ua, $req);
 }
@@ -288,6 +260,10 @@ sub _merge_opt {
         'd|decoder=s'   => \$config->{decoder},
         'm|method=s'    => \$config->{method},
         'timeout=i'     => \$config->{timeout},
+        'H|header=s@'   => \$config->{header},
+        'b|cookie=s'    => \$config->{cookie},
+        'c|cookie-jar=s' => \$config->{cookie_jar},
+        'u|user=s'      => \$config->{user},
         'p|pointer=s'   => \$config->{pointer},
         'ie|in-enc=s'   => \$config->{in_enc},
         'oe|out-enc=s'  => \$config->{out_enc},
@@ -298,7 +274,7 @@ sub _merge_opt {
         'indent=i'      => \$config->{indent},
         'raw'           => \$config->{raw},
         'verbose'       => \$config->{verbose},
-        'rc=s'          => \$config->{rc},
+#        'rc=s'          => \$config->{rc},
         'h|help'        => sub {
             _show_usage(1);
         },
