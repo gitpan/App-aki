@@ -3,6 +3,7 @@ use warnings;
 use Module::Build;
 
 my $builder = Module::Build->new(
+    name                => 'App-aki',
     module_name         => 'App::aki',
     license             => 'perl',
     dist_author         => 'Dai Okabayashi <bayashi@cpan.org>',
@@ -20,7 +21,7 @@ my $builder = Module::Build->new(
         'File::Temp' => 0,
     },
     requires => {
-        'perl' => '5.008001',
+        'perl' => '5.008005',
         'Getopt::Long' => 0,
         'Pod::Usage' => 0,
         'LWP::UserAgent' => 0,
@@ -40,9 +41,11 @@ my $builder = Module::Build->new(
     add_to_cleanup      => [ 'App-aki-*' ],
     meta_merge     => {
       resources => {
-        repository  => 'http://github.com/bayashi/App-aki'
+        repository  => 'http://github.com/bayashi/App-aki',
+        bugtracker  => 'http://github.com/bayashi/App-aki/issues',
       }
     },
+    test_files => (-d '.git' || $ENV{RELEASE_TESTING}) ? ['t/', 'xt/'] : ['t/'],
     recursive_test_files => 1,
 );
 

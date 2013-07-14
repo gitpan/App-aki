@@ -18,6 +18,7 @@ aki - The command-line data processor for web content
 =head2 OPTIONS
 
     -d   --decoder       specify deoder(default: auto detect)
+
          --agent         user agent
          --timeout       connection timeout
     -m,  --method        HTTP method(default: GET)
@@ -26,25 +27,51 @@ aki - The command-line data processor for web content
     -b,  --cookie        cookie file path for request
     -c,  --cookie-jar    file path for saving response cookie
     -u,  --user          basic authentication credentials( "user:passwd" )
+
     -p,  --pointer       JSON pointer string(See: JSON::Pointer)
+
     -ie, --in-enc        input encoding(default: utf8)
     -oe, --out-enc       output encoding(default: utf8)
+
          --color         colorize the result
          --print_escapes show non-printable chars as "\n", "\t", etc.
          --stderr        print to STDERR(default: STDOUT)
          --indent        how many spaces in each indent(default: 4)
+
          --raw           show raw content
          --verbose       show verbose information
 
     -h,  --help          show this help
     -v,  --version       show the version
 
-=head2 EXAMPLE
+
+=head1 EXAMPLE
+
+Easy Example:
 
     $ aki http://example.com/json --pointer '/foo/bar/0'
     ---
         baz     123
         qux     "foobar"
+    ---
+
+Example with OAuth header:
+
+    $ aki https://api.example.com/1.1/statuses/home_timeline.json --header 'Authorization: OAuth oauth_consumer_key="OAUTH_CONSUMER_KEY", oauth_nonce="OAUTH_NONCE", oauth_signature="OAUTH_SIGNATURE", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1373763215", oauth_token="OAUTH_TOKEN", oauth_version="1.0"' --pointer '/0/entities'
+
+    ---
+        urls            [
+            {
+                display_url    "example.com/foo",
+                expanded_url   "example.com/bar",
+                indices        [
+                    50,
+                    72
+                ],
+                url            "example.com/baz"
+            }
+        ],
+        user_mentions   []
     ---
 
 

@@ -22,7 +22,7 @@ name: App-aki
 provides:
   App::aki:
     file: lib/App/aki.pm
-    version: 0.08
+    version: 0.09
 requires:
   Config::CmdRC: 0
   Data::MessagePack: 0
@@ -38,8 +38,9 @@ requires:
   Pod::Usage: 0
   XML::TreePP: 0
   YAML::Syck: 0
-  perl: 5.008001
+  perl: 5.008005
 resources:
+  bugtracker: http://github.com/bayashi/App-aki/issues
   license: http://dev.perl.org/licenses/
   repository: http://github.com/bayashi/App-aki
-version: 0.08
+version: 0.09
