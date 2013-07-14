@@ -10,7 +10,7 @@ use Encode qw//;
 use File::Spec;
 use Config::CmdRC '.akirc';
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 # Every decode routine MUST return the UNICODE string.
 our %DECODERS = (
@@ -278,7 +278,7 @@ sub _merge_opt {
         'indent=i'      => \$config->{indent},
         'raw'           => \$config->{raw},
         'verbose'       => \$config->{verbose},
-#        'rc=s'          => \$config->{rc},
+        'rc=s'          => \$config->{rc},
         'h|help'        => sub {
             _show_usage(1);
         },
